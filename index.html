@@ -462,6 +462,7 @@ body {
   <header class="app-header">
     <h1 class="app-title">🍽️ 菜单助手</h1>
     <div class="header-actions">
+      <button class="btn btn-sm" onclick="openSettings()">⚙️ 设置</button>
       <button class="btn btn-sm" onclick="openCatManager()">📂 分类</button>
       <button class="btn btn-sm btn-primary" onclick="openPreview()">📋 预览</button>
     </div>
@@ -510,7 +511,7 @@ const PRESET_COLORS = [
 
 const FOOD_EMOJIS = ['🥗','🥩','🍲','🍚','🦐','🐟','🍗','🥬','🍜','🍝','🧁','🍰','🍉','🥂','🫕','🍱'];
 
-let data = { categories: [], dishes: [] };
+let data = { categories: [], dishes: [], settings: { bossName: '', menuTitle: '今日菜单' } };
 let activeCatId = null;
 
 function loadData() {
@@ -520,6 +521,7 @@ function loadData() {
       const parsed = JSON.parse(raw);
       data.categories = parsed.categories || [];
       data.dishes = parsed.dishes || [];
+      data.settings = parsed.settings || { bossName: '', menuTitle: '今日菜单' };
     }
   } catch (e) { /* ignore */ }
   if (!data.categories.length) {
@@ -793,6 +795,48 @@ function closeModal() {
 }
 
 /* ================================================================
+   SETTINGS MODAL
+   ================================================================ */
+function openSettings() {
+  const s = data.settings;
+  const container = document.getElementById('modalContainer');
+  container.innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal" style="max-width:420px;">
+        <div class="modal-header">
+          <h2>⚙️ 菜单设置</h2>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <form onsubmit="saveSettings(event)">
+          <div class="form-group">
+            <label class="form-label">哪位老板/老总</label>
+            <input class="form-input" id="bossNameInput" placeholder="例如：张总、李老板" maxlength="20" value="${escHtml(s.bossName)}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">菜单标题</label>
+            <input class="form-input" id="menuTitleInput" placeholder="例如：今日菜单、晚宴菜单" maxlength="20" value="${escHtml(s.menuTitle)}" required>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn" onclick="closeModal()">取消</button>
+            <button type="submit" class="btn btn-primary">💾 保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
+function saveSettings(e) {
+  e.preventDefault();
+  const bossName = document.getElementById('bossNameInput').value.trim();
+  const menuTitle = document.getElementById('menuTitleInput').value.trim() || '今日菜单';
+  data.settings = { bossName, menuTitle };
+  saveData();
+  closeModal();
+  toast('✅ 设置已保存');
+}
+
+/* ================================================================
    PREVIEW MODAL
    ================================================================ */
 function openPreview() {
@@ -807,6 +851,8 @@ function openPreview() {
     `<div class="menu-dish"><span class="menu-dish-num">${i + 1}.</span>${escHtml(d.name)}</div>`
   ).join('');
 
+  const s = data.settings;
+  const fullTitle = (s.bossName ? s.bossName + ' · ' : '') + s.menuTitle;
   const dateStr = formatDate();
   const container = document.getElementById('modalContainer');
   container.innerHTML = `
@@ -818,7 +864,7 @@ function openPreview() {
         </div>
         <div class="preview-scroll">
           <div class="menu-preview" id="menuPreview">
-            <div class="menu-title">今日菜单</div>
+            <div class="menu-title">${escHtml(fullTitle)}</div>
             <div class="menu-date">${dateStr}</div>
             <div class="menu-section">
               ${dishItems}
@@ -859,7 +905,10 @@ async function exportImage() {
       logging: false,
     });
     const link = document.createElement('a');
-    link.download = '菜单_' + formatDate().replace(/\//g, '-') + '.png';
+    const now = new Date();
+    const dateStr2 = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const filename = (data.settings.bossName ? data.settings.bossName + '_' : '') + data.settings.menuTitle + '_' + dateStr2 + '.png';
+    link.download = filename;
     link.href = canvas.toDataURL('image/png');
     link.click();
     toast('✅ 图片已下载');
