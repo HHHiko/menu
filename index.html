@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="菜单助手">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>菜单助手 - 私人厨师菜单管理</title>
+
+<style>
+/* ========== RESET & BASE ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-start: #1a1a2e;
+  --bg-mid: #16213e;
+  --bg-end: #0f3460;
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  --text-primary: #f0e6d3;
+  --text-secondary: #b8b0a0;
+  --text-muted: #7a7568;
+  --accent: #d4a574;
+  --danger: #e74c3c;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --font-heading: 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --font-body: 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+}
+
+html { height: 100%; }
+
+body {
+  min-height: 100%;
+  min-height: 100dvh;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--bg-start), var(--bg-mid), var(--bg-end));
+  background-attachment: fixed;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  display: flex;
+  justify-content: center;
+  padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+}
+
+/* animated bg particles */
+.bg-particles {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+}
+.bg-particles span {
+  position: absolute;
+  display: block;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(212, 165, 116, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: float 20s infinite ease-in-out;
+}
+.bg-particles span:nth-child(1) { top: -10%; left: -10%; animation-delay: 0s; }
+.bg-particles span:nth-child(2) { bottom: -10%; right: -10%; animation-delay: -7s; width: 300px; height: 300px; }
+.bg-particles span:nth-child(3) { top: 50%; left: 50%; animation-delay: -14s; width: 250px; height: 250px; }
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
+  33%  { transform: translate(30px, -30px) scale(1.1); opacity: 0.7; }
+  66%  { transform: translate(-20px, 20px) scale(0.9); opacity: 0.3; }
+}
+
+/* ========== APP CONTAINER ========== */
+.app-container {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 720px;
+  display: flex; flex-direction: column; gap: 20px;
+  padding-bottom: 120px;
+}
+
+/* ========== HEADER ========== */
+.app-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow);
+}
+.app-title {
+  font-family: var(--font-heading);
+  font-size: 1.6rem; font-weight: 700;
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, #d4a574, #f0e6d3);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.header-actions {
+  display: flex; gap: 10px;
+}
+
+/* ========== BUTTONS ========== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 16px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color: var(--text-primary);
+  font-size: 0.85rem; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  font-family: var(--font-body);
+}
+.btn:active { transform: scale(0.95); }
+.btn-primary {
+  background: rgba(212, 165, 116, 0.25);
+  border-color: rgba(212, 165, 116, 0.4);
+  color: var(--accent);
+}
+.btn-danger {
+  background: rgba(231, 76, 60, 0.15);
+  border-color: rgba(231, 76, 60, 0.3);
+  color: #e74c3c;
+}
+.btn-sm { padding: 6px 12px; font-size: 0.75rem; }
+.btn-icon {
+  width: 40px; height: 40px; padding: 0; border-radius: 50%;
+  font-size: 1.2rem;
+}
+
+/* ========== CATEGORY TABS ========== */
+.category-section { display: flex; flex-direction: column; gap: 14px; }
+.section-label {
+  font-size: 0.8rem; font-weight: 500; color: var(--text-secondary);
+  letter-spacing: 0.06em; text-transform: uppercase; padding-left: 4px;
+}
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+/* square glass card */
+.cat-card {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--glass-shadow);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+.cat-card::before {
+  content: ''; position: absolute; inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+.cat-card:active { transform: scale(0.96); }
+.cat-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.3), var(--glass-shadow);
+}
+.cat-card .cat-emoji { font-size: 2.2rem; line-height: 1; }
+.cat-card .cat-name {
+  font-size: 0.95rem; font-weight: 600; letter-spacing: 0.03em;
+}
+.cat-card .cat-count {
+  font-size: 0.7rem; color: var(--text-muted);
+  background: rgba(255,255,255,0.06);
+  padding: 3px 10px; border-radius: 20px;
+}
+
+/* color dot */
+.cat-card .cat-dot {
+  position: absolute; top: 12px; right: 12px;
+  width: 10px; height: 10px; border-radius: 50%;
+}
+
+/* ========== DISH LIST ========== */
+.dish-list {
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.dish-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+.dish-item:active { transform: scale(0.98); }
+
+.dish-check {
+  appearance: none; -webkit-appearance: none;
+  width: 24px; height: 24px; min-width: 24px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex; align-items: center; justify-content: center;
+}
+.dish-check:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.dish-check:checked::after {
+  content: '✓'; font-size: 14px; font-weight: 700; color: #1a1a2e;
+}
+
+.dish-name {
+  flex: 1;
+  font-size: 1rem; font-weight: 500;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+.dish-item.selected .dish-name { color: var(--accent); }
+
+.dish-delete {
+  width: 32px; height: 32px; min-width: 32px;
+  border: none; border-radius: 50%;
+  background: rgba(231, 76, 60, 0.1);
+  color: rgba(231, 76, 60, 0.7);
+  font-size: 1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s ease;
+}
+.dish-delete:active { background: rgba(231, 76, 60, 0.3); }
+
+.empty-hint {
+  text-align: center; padding: 48px 20px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.empty-hint .empty-icon { font-size: 3rem; display: block; margin-bottom: 12px; opacity: 0.4; }
+
+/* ========== ADD BAR ========== */
+.add-bar {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  width: calc(100% - 32px); max-width: 688px; z-index: 10;
+  display: flex; gap: 10px;
+  padding: 12px;
+  background: rgba(20, 20, 40, 0.85);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.4);
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.add-bar input {
+  flex: 1; min-width: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary);
+  font-size: 1rem; font-family: var(--font-body);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.add-bar input:focus { border-color: var(--accent); }
+.add-bar input::placeholder { color: var(--text-muted); }
+.add-bar .btn { padding: 12px 24px; font-size: 1rem; }
+
+/* ========== MODAL ========== */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+  width: 100%; max-width: 500px; max-height: 85vh;
+  overflow-y: auto;
+  background: rgba(30, 30, 50, 0.95);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  padding: 24px;
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.modal-header h2 {
+  font-family: var(--font-heading);
+  font-size: 1.3rem; font-weight: 700;
+}
+.modal-close {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary); font-size: 1.2rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-close:active { background: rgba(255,255,255,0.15); }
+
+/* ========== CATEGORY EDIT LIST ========== */
+.cat-edit-list { display: flex; flex-direction: column; gap: 10px; }
+.cat-edit-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.04);
+  border-radius: var(--radius-sm);
+}
+.cat-edit-emoji { font-size: 1.5rem; }
+.cat-edit-name { flex: 1; font-weight: 500; }
+
+.color-options { display: flex; gap: 8px; flex-wrap: wrap; }
+.color-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  cursor: pointer; transition: all 0.15s;
+  border: 2px solid transparent;
+}
+.color-dot.selected { border-color: #fff; transform: scale(1.15); }
+
+.emoji-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+.emoji-option {
+  width: 40px; height: 40px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.05); border: 1px solid transparent;
+  font-size: 1.3rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.emoji-option.selected { border-color: var(--accent); background: rgba(212,165,116,0.15); }
+.emoji-option:active { transform: scale(0.9); }
+
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block; font-size: 0.8rem; font-weight: 500;
+  color: var(--text-secondary); margin-bottom: 8px;
+}
+.form-input {
+  width: 100%; padding: 12px 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary); font-size: 1rem;
+  font-family: var(--font-body); outline: none;
+}
+.form-input:focus { border-color: var(--accent); }
+
+.form-actions { display: flex; gap: 10px; margin-top: 20px; }
+.form-actions .btn { flex: 1; }
+
+/* ========== PREVIEW ========== */
+.preview-scroll { max-height: 70vh; overflow-y: auto; }
+
+.menu-preview {
+  background: #fff;
+  color: #2c2c2c;
+  padding: 32px 28px;
+  border-radius: var(--radius-md);
+  font-family: 'PingFang SC', 'Noto Serif SC', 'STSong', 'SimSun', 'Songti SC', serif;
+  min-height: 400px;
+}
+.menu-preview .menu-title {
+  text-align: center; font-size: 1.8rem; font-weight: 700;
+  letter-spacing: 0.1em; margin-bottom: 4px;
+  color: #1a1a1a;
+}
+.menu-preview .menu-date {
+  text-align: center; font-size: 0.85rem; color: #888;
+  margin-bottom: 24px; padding-bottom: 16px;
+  border-bottom: 1px solid #e0d5c7;
+}
+.menu-preview .menu-section { margin-bottom: 16px; }
+.menu-preview .menu-dish {
+  text-align: center;
+  padding: 8px 0;
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+}
+
+.menu-preview-footer {
+  margin-top: 24px; padding-top: 16px;
+  border-top: 1px solid #e0d5c7;
+  text-align: center;
+  font-size: 0.8rem; color: #aaa;
+}
+
+/* ========== PREVIEW ACTIONS ========== */
+.preview-actions {
+  display: flex; gap: 10px; margin-top: 20px;
+}
+.preview-actions .btn { flex: 1; }
+
+/* ========== TOAST ========== */
+.toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 200;
+  padding: 12px 24px;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 30px;
+  color: #fff; font-size: 0.9rem; font-weight: 500;
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 2s forwards;
+  pointer-events: none;
+}
+@keyframes toastIn  { from { transform: translateX(-50%) translateY(-20px); opacity: 0; } to { opacity: 1; } }
+@keyframes toastOut { to { opacity: 0; transform: translateX(-50%) translateY(-20px); } }
+
+/* ========== RESPONSIVE ========== */
+@media (min-width: 480px) {
+  .category-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (min-width: 640px) {
+  .category-grid { grid-template-columns: repeat(4, 1fr); }
+  .app-title { font-size: 1.8rem; }
+}
+
+@media (min-width: 768px) {
+  body { padding-top: 40px; }
+  .category-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+}
+
+/* ========== PRINT ========== */
+@media print {
+  body { background: #fff !important; }
+  .bg-particles, .app-header, .category-section, .add-bar, .preview-actions,
+  .modal-overlay, .toast { display: none !important; }
+  .app-container { max-width: 100%; padding: 0; }
+  .preview-scroll { max-height: none; overflow: visible; }
+  .menu-preview { box-shadow: none; border-radius: 0; padding: 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-particles"><span></span><span></span><span></span></div>
+
+<div class="app-container" id="appContainer">
+  <!-- Header -->
+  <header class="app-header">
+    <h1 class="app-title">🍽️ 菜单助手</h1>
+    <div class="header-actions">
+      <button class="btn btn-sm" onclick="openCatManager()">📂 分类</button>
+      <button class="btn btn-sm btn-primary" onclick="openPreview()">📋 预览</button>
+    </div>
+  </header>
+
+  <!-- Category Tabs -->
+  <section class="category-section">
+    <div class="section-label">选择分类</div>
+    <div class="category-grid" id="categoryGrid"></div>
+  </section>
+
+  <!-- Dish List -->
+  <div class="dish-list" id="dishList"></div>
+
+  <!-- Add Bar -->
+  <div class="add-bar" id="addBar">
+    <input type="text" id="dishInput" placeholder="输入菜式名称，按回车添加..." maxlength="50">
+    <button class="btn btn-primary" onclick="addDish()">➕ 添加</button>
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+<div id="modalContainer"></div>
+
+<div id="toastContainer"></div>
+
+<script>
+/* ================================================================
+   DATA LAYER
+   ================================================================ */
+const STORAGE_KEY = 'chef_menu_data';
+
+const DEFAULT_CATS = [
+  { id: 'cat_1', name: '前菜', emoji: '🥗', color: '#FF8C69' },
+  { id: 'cat_2', name: '肉菜', emoji: '🥩', color: '#C0392B' },
+  { id: 'cat_3', name: '汤品', emoji: '🍲', color: '#F0A500' },
+  { id: 'cat_4', name: '主食', emoji: '🍚', color: '#A0522D' },
+];
+
+const PRESET_COLORS = [
+  '#FF8C69','#C0392B','#F0A500','#A0522D',
+  '#E74C3C','#E67E22','#27AE60','#2980B9',
+  '#8E44AD','#2ECC71','#F39C12','#1ABC9C',
+  '#D4A574','#7F8C8D','#C44569','#3B3B98',
+];
+
+const FOOD_EMOJIS = ['🥗','🥩','🍲','🍚','🦐','🐟','🍗','🥬','🍜','🍝','🧁','🍰','🍉','🥂','🫕','🍱'];
+
+let data = { categories: [], dishes: [] };
+let activeCatId = null;
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      data.categories = parsed.categories || [];
+      data.dishes = parsed.dishes || [];
+    }
+  } catch (e) { /* ignore */ }
+  if (!data.categories.length) {
+    data.categories = DEFAULT_CATS.map(c => ({ ...c }));
+    data.dishes = [];
+    saveData();
+  }
+  if (!data.categories.length) return;
+  activeCatId = data.categories[0].id;
+}
+
+function saveData() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    toast('⚠️ 存储空间不足，请清理一些数据');
+  }
+}
+
+function genId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); }
+
+/* ================================================================
+   HELPERS
+   ================================================================ */
+function getCat(id) { return data.categories.find(c => c.id === id); }
+function getDishesByCat(catId) { return data.dishes.filter(d => d.categoryId === catId); }
+function getSelectedDishes() { return data.dishes.filter(d => d.selected); }
+
+function formatDate() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const week = ['日','一','二','三','四','五','六'][now.getDay()];
+  return `${y}年${m}月${d}日 星期${week}`;
+}
+
+/* ================================================================
+   TOAST
+   ================================================================ */
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), 2500);
+}
+
+/* ================================================================
+   RENDER
+   ================================================================ */
+function renderAll() {
+  renderCategoryTabs();
+  renderDishList();
+}
+
+function renderCategoryTabs() {
+  const grid = document.getElementById('categoryGrid');
+  grid.innerHTML = data.categories.map(c => {
+    const count = getDishesByCat(c.id).length;
+    const selCount = getDishesByCat(c.id).filter(d => d.selected).length;
+    const isActive = c.id === activeCatId;
+    return `
+      <div class="cat-card ${isActive ? 'active' : ''}"
+           style="${isActive ? 'border-color:' + c.color + '; box-shadow: 0 0 0 2px ' + c.color + '33, var(--glass-shadow);' : ''}"
+           onclick="setActiveCat('${c.id}')">
+        <div class="cat-dot" style="background:${c.color}"></div>
+        <div class="cat-emoji">${c.emoji}</div>
+        <div class="cat-name">${c.name}</div>
+        <div class="cat-count">${selCount}/${count} 道</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderDishList() {
+  const cat = getCat(activeCatId);
+  const list = document.getElementById('dishList');
+  if (!cat) { list.innerHTML = ''; return; }
+
+  const dishes = getDishesByCat(activeCatId);
+  if (!dishes.length) {
+    list.innerHTML = `<div class="empty-hint">
+      <span class="empty-icon">📝</span>
+      还没有「${cat.name}」<br>在下方输入菜名，点击添加
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = dishes.map((d, i) => `
+    <div class="dish-item ${d.selected ? 'selected' : ''}">
+      <input type="checkbox" class="dish-check" ${d.selected ? 'checked' : ''}
+             onchange="toggleDish('${d.id}')" aria-label="选择">
+      <span class="dish-name">${escHtml(d.name)}</span>
+      <button class="dish-delete" onclick="deleteDish('${d.id}')" aria-label="删除">✕</button>
+    </div>
+  `).join('');
+}
+
+function escHtml(s) {
+  const el = document.createElement('span');
+  el.textContent = s;
+  return el.innerHTML;
+}
+
+/* ================================================================
+   ACTIONS
+   ================================================================ */
+function setActiveCat(id) {
+  activeCatId = id;
+  renderAll();
+}
+
+function addDish() {
+  const input = document.getElementById('dishInput');
+  const name = input.value.trim();
+  if (!name) return;
+  if (!activeCatId) { toast('⚠️ 请先选择一个分类'); return; }
+
+  data.dishes.push({
+    id: genId(),
+    name,
+    categoryId: activeCatId,
+    selected: true,
+  });
+  saveData();
+  input.value = '';
+  input.focus();
+  renderAll();
+  toast('✅ 已添加：' + name);
+}
+
+function toggleDish(id) {
+  const dish = data.dishes.find(d => d.id === id);
+  if (dish) { dish.selected = !dish.selected; saveData(); renderAll(); }
+}
+
+function deleteDish(id) {
+  const dish = data.dishes.find(d => d.id === id);
+  if (!dish) return;
+  data.dishes = data.dishes.filter(d => d.id !== id);
+  saveData();
+  renderAll();
+  toast('🗑️ 已删除：' + dish.name);
+}
+
+/* ================================================================
+   CATEGORY MANAGER MODAL
+   ================================================================ */
+let editCatId = null;
+let editCatData = { name: '', emoji: '🥗', color: '#FF8C69' };
+
+function openCatManager(existingId) {
+  const container = document.getElementById('modalContainer');
+
+  const catListHtml = data.categories.map(c => `
+    <div class="cat-edit-item">
+      <span class="cat-edit-emoji">${c.emoji}</span>
+      <span class="cat-edit-name">${c.name}</span>
+      <span class="cat-dot" style="position:static;background:${c.color};width:12px;height:12px;border-radius:50%;"></span>
+      <button class="btn btn-sm" onclick="editCat('${c.id}')">✏️</button>
+      <button class="btn btn-sm btn-danger" onclick="removeCat('${c.id}')">🗑️</button>
+    </div>
+  `).join('');
+
+  container.innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>📂 管理分类</h2>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="cat-edit-list">${catListHtml || '<p style="color:var(--text-muted);text-align:center;">暂无分类</p>'}</div>
+        <hr style="border-color:var(--glass-border);margin:20px 0;">
+        <form onsubmit="saveCat(event)" id="catForm">
+          <input type="hidden" id="editCatId" value="">
+          <div class="form-group">
+            <label class="form-label">分类名称</label>
+            <input class="form-input" id="catNameInput" placeholder="例如：甜品" maxlength="10" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">图标</label>
+            <div class="emoji-picker" id="emojiPicker">
+              ${FOOD_EMOJIS.map(e => `<span class="emoji-option" onclick="pickEmoji('${e}', this)">${e}</span>`).join('')}
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">颜色</label>
+            <div class="color-options" id="colorPicker">
+              ${PRESET_COLORS.map(c => `<span class="color-dot" style="background:${c}" onclick="pickColor('${c}', this)" data-color="${c}"></span>`).join('')}
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn" onclick="closeModal()">取消</button>
+            <button type="submit" class="btn btn-primary" id="catSaveBtn">➕ 添加分类</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+
+  setCatFormEmoji(FOOD_EMOJIS[0]);
+  setCatFormColor(PRESET_COLORS[0]);
+}
+
+function editCat(id) {
+  const cat = getCat(id);
+  if (!cat) return;
+  document.getElementById('editCatId').value = id;
+  document.getElementById('catNameInput').value = cat.name;
+  document.getElementById('catSaveBtn').textContent = '💾 保存修改';
+  setCatFormEmoji(cat.emoji);
+  setCatFormColor(cat.color);
+}
+
+function setCatFormEmoji(emoji) {
+  document.querySelectorAll('#emojiPicker .emoji-option').forEach(el => {
+    el.classList.toggle('selected', el.textContent === emoji);
+  });
+  editCatData.emoji = emoji;
+}
+
+function setCatFormColor(color) {
+  document.querySelectorAll('#colorPicker .color-dot').forEach(el => {
+    el.classList.toggle('selected', el.dataset.color === color);
+  });
+  editCatData.color = color;
+}
+
+function pickEmoji(emoji, el) { setCatFormEmoji(emoji); }
+function pickColor(color, el) { setCatFormColor(color); }
+
+function saveCat(e) {
+  e.preventDefault();
+  const id = document.getElementById('editCatId').value;
+  const name = document.getElementById('catNameInput').value.trim();
+  if (!name) return;
+  const catData = { name, emoji: editCatData.emoji, color: editCatData.color };
+
+  if (id) {
+    // Edit existing
+    const cat = getCat(id);
+    if (cat) { cat.name = catData.name; cat.emoji = catData.emoji; cat.color = catData.color; }
+  } else {
+    // Add new
+    if (data.categories.length >= 30) { toast('⚠️ 最多30个分类'); return; }
+    data.categories.push({ id: genId(), ...catData });
+  }
+
+  saveData();
+  closeModal();
+  renderAll();
+  toast(id ? '✅ 分类已更新' : '✅ 分类已添加');
+}
+
+function removeCat(id) {
+  if (data.categories.length <= 1) { toast('⚠️ 至少保留一个分类'); return; }
+  const cat = getCat(id);
+  if (!cat) return;
+  if (!confirm(`确定删除分类「${cat.name}」吗？\n该分类下的所有菜式也会被删除。`)) return;
+  data.categories = data.categories.filter(c => c.id !== id);
+  data.dishes = data.dishes.filter(d => d.categoryId !== id);
+  if (activeCatId === id) activeCatId = data.categories[0].id;
+  saveData();
+  closeModal();
+  renderAll();
+  toast('🗑️ 分类已删除');
+}
+
+function closeModal() {
+  document.getElementById('modalContainer').innerHTML = '';
+}
+
+/* ================================================================
+   PREVIEW MODAL
+   ================================================================ */
+function openPreview() {
+  const selected = getSelectedDishes();
+  if (!selected.length) {
+    toast('⚠️ 请先勾选要上菜单的菜式（点击菜式旁的圆圈）');
+    return;
+  }
+
+  // Simple list, no category grouping
+  const dishItems = selected.map((d, i) =>
+    `<div class="menu-dish"><span class="menu-dish-num">${i + 1}.</span>${escHtml(d.name)}</div>`
+  ).join('');
+
+  const dateStr = formatDate();
+  const container = document.getElementById('modalContainer');
+  container.innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal" style="max-width:500px;">
+        <div class="modal-header">
+          <h2>📋 菜单预览</h2>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="preview-scroll">
+          <div class="menu-preview" id="menuPreview">
+            <div class="menu-title">今日菜单</div>
+            <div class="menu-date">${dateStr}</div>
+            <div class="menu-section">
+              ${dishItems}
+            </div>
+            <div class="menu-preview-footer">
+              共 ${selected.length} 道菜式
+            </div>
+          </div>
+        </div>
+        <div class="preview-actions">
+          <button class="btn btn-primary" onclick="exportImage()">🖼️ 导出图片</button>
+          <button class="btn" onclick="exportPDF()">🖨️ 导出PDF</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function exportImage() {
+  const preview = document.getElementById('menuPreview');
+  if (!preview) return;
+  try {
+    toast('⏳ 正在生成图片...');
+    // Dynamic import html2canvas
+    if (typeof html2canvas === 'undefined') {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('CDN load failed'));
+        document.head.appendChild(s);
+      });
+    }
+    const canvas = await html2canvas(preview, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    });
+    const link = document.createElement('a');
+    link.download = '菜单_' + formatDate().replace(/\//g, '-') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    toast('✅ 图片已下载');
+  } catch (e) {
+    toast('⚠️ 导出失败，请检查网络连接（需要加载CDN资源）');
+    console.error(e);
+  }
+}
+
+function exportPDF() {
+  window.print();
+}
+
+/* ================================================================
+   KEYBOARD
+   ================================================================ */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.activeElement?.id === 'dishInput') {
+    e.preventDefault();
+    addDish();
+  }
+  if (e.key === 'Escape') {
+    closeModal();
+  }
+});
+
+/* ================================================================
+   INIT
+   ================================================================ */
+loadData();
+renderAll();
+</script>
+
+</body>
+</html>
