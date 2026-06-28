@@ -696,6 +696,7 @@ function openCatManager(existingId) {
           <button class="modal-close" onclick="closeModal()">✕</button>
         </div>
         <div class="cat-edit-list">${catListHtml || '<p style="color:var(--text-muted);text-align:center;">暂无分类</p>'}</div>
+        <button class="btn btn-sm" style="margin-top:12px;width:100%;" onclick="resetCategories()">🔄 恢复默认分类</button>
         <hr style="border-color:var(--glass-border);margin:20px 0;">
         <form onsubmit="saveCat(event)" id="catForm">
           <input type="hidden" id="editCatId" value="">
@@ -790,6 +791,17 @@ function removeCat(id) {
   closeModal();
   renderAll();
   toast('🗑️ 分类已删除');
+}
+
+function resetCategories() {
+  if (!confirm('将分类恢复为默认（前菜、肉类、菜类、海鲜、汤品、主食），所有自定义分类和菜式将被清除。确定吗？')) return;
+  data.categories = DEFAULT_CATS.map(c => ({ ...c }));
+  data.dishes = [];
+  activeCatId = data.categories[0].id;
+  saveData();
+  closeModal();
+  renderAll();
+  toast('✅ 已恢复默认分类');
 }
 
 function closeModal() {
